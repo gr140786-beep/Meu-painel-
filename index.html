@@ -94,7 +94,7 @@ button,input,select{font:inherit;color:inherit}
 <script>
 (function(){
 "use strict";
-var FONTES=[{app:"imovyn",nome:"Imovyn",url:"https://imovyn.netlify.app/api/painel"},{app:"orcahub",nome:"OrçaHub",url:"https://orcahub.app.br/api/painel"}];
+var FONTES=[{app:"imovyn",nome:"Imovyn",url:"https://imovyn.netlify.app/api/painel"},{app:"orcahub",nome:"OrçaHub",url:"https://orcahub.app.br/api/painel",reserva:["https://orcahub.netlify.app/api/painel"]}];
 var NOME_APP={imovyn:"Imovyn",orcahub:"OrçaHub"};
 var SIT={sem:"Não colocou o cartão",login:"Só fez o login",teste:"Em teste grátis",pendente:"Pagamento em análise",ativa:"Pagando",atrasada:"Pagamento atrasado",vencida:"Venceu e não pagou",cancelada:"Cancelou"};
 var G={senha:"",clientes:[],erros:[],hoje:"",aba:"tudo",filtro:"todos",busca:"",quando:null,carregando:false};
@@ -130,8 +130,14 @@ function telaLogin(erro){
   setTimeout(function(){try{$("#s").focus()}catch(e){}},50);
 }
 
+/* tenta o endereço principal e, se não responder, os de reserva (ex.: o domínio próprio ainda não está ligado) */
 function buscarFonte(f){
-  return fetch(f.url,{method:"POST",headers:{"Content-Type":"application/json","x-painel-senha":G.senha},body:"{}",cache:"no-store"})
+  var urls=[f.url].concat(f.reserva||[]);
+  var tenta=function(i){return buscarUrl(f,urls[i]).then(function(r){return (r.status===0&&i+1<urls.length)?tenta(i+1):r})};
+  return tenta(0);
+}
+function buscarUrl(f,url){
+  return fetch(url,{method:"POST",headers:{"Content-Type":"application/json","x-painel-senha":G.senha},body:"{}",cache:"no-store"})
     .then(function(r){return r.json().catch(function(){return {}}).then(function(j){return {f:f,status:r.status,j:j}})})
     .catch(function(){return {f:f,status:0,j:{erro:"Sem resposta do "+f.nome+". Verifique a internet ou se o "+f.nome+" está no ar."}}});
 }
